@@ -6,7 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ibc-client-tendermint = "0.53.0"
-ibc-client-tendermint-types = "0.53.0"
 ibc-core = "0.53.0"
-ibc-core-client = "0.53.0"
+ibc-client-tendermint = "0.53.0"
