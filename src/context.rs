@@ -1,13 +1,15 @@
+use std::collections::HashMap;
 use std::marker::PhantomData;
 
 use ibc_client_tendermint::client_state::ClientState;
 use ibc_core::client::context::consensus_state::ConsensusState as ConsensusStateTrait;
-use ibc_core::client::context::{ExtClientExecutionContext, ExtClientValidationContext};
+use ibc_core::client::context::ExtClientValidationContext;
 use ibc_core::primitives::Timestamp;
 use ibc_core::{
     client::{
         context::{
-            client_state::ClientStateExecution, ClientExecutionContext, ClientValidationContext,
+            client_state::{ClientStateCommon, ClientStateExecution, ClientStateValidation},
+            ClientExecutionContext, ClientValidationContext,
         },
         types::Height,
     },
@@ -70,6 +72,8 @@ impl<C: ClientType> ClientExecutionContext for Ctx<C> {
         client_state_path: ibc_core::host::types::path::ClientStatePath,
         client_state: Self::ClientStateRef,
     ) -> Result<(), ibc_core::handler::types::error::ContextError> {
+        println!("{}", client_state_path);
+        self.client = client_state;
         Ok(())
     }
 
@@ -78,6 +82,8 @@ impl<C: ClientType> ClientExecutionContext for Ctx<C> {
         consensus_state_path: ibc_core::host::types::path::ClientConsensusStatePath,
         consensus_state: Self::ConsensusStateRef,
     ) -> Result<(), ibc_core::handler::types::error::ContextError> {
+        println!("{}", consensus_state_path);
+        self.consensus_state = consensus_state;
         Ok(())
     }
 
@@ -151,24 +157,77 @@ mod tests {
 
     use std::{str::FromStr as _, time::Duration};
 
-    use crate::api::TendermintClient;
+    use crate::{api::TendermintClient, utils::AnyCodec};
 
     use super::{ClientType, *};
     use ibc_client_tendermint::{
         consensus_state::{self, ConsensusState},
         types::{
             AllowUpdate, ClientState as ClientStateType, ConsensusState as ConsensusStateType,
-            TrustThreshold,
+            Header, TrustThreshold,
         },
     };
 
     use ibc_core::{
+        client,
         commitment_types::{commitment::CommitmentRoot, specs::ProofSpecs},
         host::types::identifiers::ChainId,
-        primitives::Timestamp,
+        primitives::{proto::Any, Timestamp},
     };
-    use tendermint::{serializers::timestamp, Hash};
+    use tendermint::{serializers::timestamp, time::Time, Hash};
+    use tendermint_testgen::{Generator, Validator};
 
+    /// Test fixture
+    #[derive(Clone, Debug)]
+    pub struct Fixture {
+        pub chain_id: ChainId,
+        pub trusted_timestamp: Timestamp,
+        pub trusted_height: Height,
+        pub validators: Vec<Validator>,
+    }
+
+    impl Default for Fixture {
+        fn default() -> Self {
+            Fixture {
+                chain_id: ChainId::new("ibc-1").unwrap(),
+                trusted_timestamp: Timestamp::now(),
+                trusted_height: Height::new(1, 10).unwrap(),
+                validators: vec![
+                    Validator::new("1").voting_power(40),
+                    Validator::new("2").voting_power(30),
+                    Validator::new("3").voting_power(30),
+                ],
+            }
+        }
+    }
+
+    impl Fixture {
+        fn dummy_header(&self, header_height: Height) -> Header {
+            let header = tendermint_testgen::Header::new(&self.validators)
+                .chain_id(self.chain_id.as_str())
+                .height(header_height.revision_height())
+                .time(Time::now())
+                .next_validators(&self.validators)
+                .app_hash(vec![0; 32].try_into().expect("never fails"));
+
+            let light_block = tendermint_testgen::LightBlock::new_default_with_header(header)
+                .generate()
+                .expect("failed to generate light block");
+
+            let tm_header = Header {
+                signed_header: light_block.signed_header,
+                validator_set: light_block.validators,
+                trusted_height: self.trusted_height,
+                trusted_next_validator_set: light_block.next_validators,
+            };
+
+            return tm_header;
+        }
+
+        pub fn dummy_client_message(&self, target_height: Height) -> Header {
+            self.dummy_header(target_height)
+        }
+    }
     #[derive(Clone, Debug, PartialEq)]
     pub struct ClientStateParams {
         pub id: ChainId,
@@ -232,12 +291,21 @@ mod tests {
             _marker: PhantomData,
         };
 
+        let client_id = ClientId::new("my_client", 10).unwrap();
         client
             .initialise(
                 &mut ctx,
-                &ClientId::new("my_client", 10).unwrap(),
+                &client_id,
                 dummy_sov_consensus_state(Timestamp::now()).into(),
             )
+            .unwrap();
+
+        let any = Fixture::default()
+            .dummy_client_message(Height::new(1,10).unwrap())
+            .clone();
+
+        client
+            .verify_client_message(&ctx, &client_id, any.into())
             .unwrap();
     }
 }
