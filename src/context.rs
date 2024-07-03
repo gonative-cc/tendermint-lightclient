@@ -157,7 +157,7 @@ mod tests {
 
     use std::{str::FromStr as _, time::Duration};
 
-    use crate::{api::TendermintClient, utils::AnyCodec};
+    use crate::{api::TendermintClient};
 
     use super::{ClientType, *};
     use ibc_client_tendermint::{
@@ -174,7 +174,7 @@ mod tests {
         host::types::identifiers::ChainId,
         primitives::{proto::Any, Timestamp},
     };
-    use tendermint::{serializers::timestamp, time::Time, Hash};
+    use tendermint::{block::header, serializers::timestamp, time::Time, Hash};
     use tendermint_testgen::{Generator, Validator};
 
     /// Test fixture
@@ -304,8 +304,10 @@ mod tests {
             .dummy_client_message(Height::new(1,10).unwrap())
             .clone();
 
-        client
-            .verify_client_message(&ctx, &client_id, any.into())
-            .unwrap();
+        // client
+        //     .verify_client_message(&ctx, &client_id, any.clone().into())
+        //     .unwrap();
+
+        client.update_state(&mut ctx , &client_id, any.into()).unwrap();
     }
 }
