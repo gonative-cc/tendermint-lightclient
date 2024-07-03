@@ -1,28 +1,25 @@
 use std::marker::PhantomData;
 
-use ibc_client_tendermint::{client_state::ClientState, consensus_state::ConsensusState};
+use ibc_client_tendermint::client_state::ClientState;
 use ibc_core::client::context::consensus_state::ConsensusState as ConsensusStateTrait;
+use ibc_core::client::context::{ExtClientExecutionContext, ExtClientValidationContext};
 use ibc_core::{
     client::{
         context::{
             client_state::ClientStateExecution, ClientExecutionContext, ClientValidationContext,
         },
-        types::{error::ClientError, Height},
+        types::Height,
     },
     host::types::identifiers::ClientId,
-    primitives::proto::Any,
 };
 
 pub struct Ctx<C: ClientType> {
+    client: C::ClientState,
     _marker: PhantomData<C>,
 }
 
-pub trait ClientType: Sized
-// where
-//     <Self::ClientState as TryFrom<Any>>::Error: Into<ClientError>,
-//     <Self::ConsensusState as TryFrom<Any>>::Error: Into<ClientError>,
-{
-    type ClientState: ClientStateExecution<Ctx<Self>>;
+pub trait ClientType: Sized {
+    type ClientState: ClientStateExecution<Ctx<Self>> + Clone;
     type ConsensusState: ConsensusStateTrait;
 }
 
@@ -35,7 +32,7 @@ impl<C: ClientType> ClientValidationContext for Ctx<C> {
         &self,
         client_id: &ClientId,
     ) -> Result<Self::ClientStateRef, ibc_core::handler::types::error::ContextError> {
-        todo!()
+        Ok(self.client.clone())
     }
 
     fn consensus_state(
@@ -108,4 +105,134 @@ impl<C: ClientType> ClientExecutionContext for Ctx<C> {
     }
 }
 
-// impl ExtClientExecutionContext for Ctx {}
+impl<C: ClientType> ExtClientValidationContext for Ctx<C> {
+    fn host_timestamp(
+        &self,
+    ) -> Result<ibc_core::primitives::Timestamp, ibc_core::handler::types::error::ContextError>
+    {
+        todo!()
+    }
+
+    fn host_height(&self) -> Result<Height, ibc_core::handler::types::error::ContextError> {
+        todo!()
+    }
+
+    fn consensus_state_heights(
+        &self,
+        client_id: &ClientId,
+    ) -> Result<Vec<Height>, ibc_core::handler::types::error::ContextError> {
+        todo!()
+    }
+
+    fn next_consensus_state(
+        &self,
+        client_id: &ClientId,
+        height: &Height,
+    ) -> Result<Option<Self::ConsensusStateRef>, ibc_core::handler::types::error::ContextError>
+    {
+        todo!()
+    }
+
+    fn prev_consensus_state(
+        &self,
+        client_id: &ClientId,
+        height: &Height,
+    ) -> Result<Option<Self::ConsensusStateRef>, ibc_core::handler::types::error::ContextError>
+    {
+        todo!()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use std::{str::FromStr as _, time::Duration};
+
+    use crate::api::TendermintClient;
+
+    use super::{ClientType, *};
+    use ibc_client_tendermint::{
+        consensus_state::{self, ConsensusState},
+        types::{
+            AllowUpdate, ClientState as ClientStateType, ConsensusState as ConsensusStateType,
+            TrustThreshold,
+        },
+    };
+
+    use ibc_core::{
+        commitment_types::{commitment::CommitmentRoot, specs::ProofSpecs},
+        host::types::identifiers::ChainId,
+        primitives::Timestamp,
+    };
+    use tendermint::Hash;
+
+    #[derive(Clone, Debug, PartialEq)]
+    pub struct ClientStateParams {
+        pub id: ChainId,
+        pub trust_level: TrustThreshold,
+        pub trusting_period: Duration,
+        pub unbonding_period: Duration,
+        pub max_clock_drift: Duration,
+        pub latest_height: Height,
+        pub proof_specs: ProofSpecs,
+        pub upgrade_path: Vec<String>,
+        pub allow_update: AllowUpdate,
+    }
+
+    pub fn dummy_sov_consensus_state(timestamp: Timestamp) -> ConsensusStateType {
+        ConsensusStateType::new(
+            vec![0].into(),
+            timestamp.into_tm_time().expect("Time exists"),
+            // Hash of default validator set
+            Hash::from_str("D6B93922C33AAEBEC9043566CB4B1B48365B1358B67C7DEF986D9EE1861BC143")
+                .expect("Never fails"),
+        )
+    }
+
+    #[test]
+    fn it_works() {
+        let default_params: ClientStateParams = ClientStateParams {
+            id: ChainId::new("ibc-1").unwrap(),
+            trust_level: TrustThreshold::ONE_THIRD,
+            trusting_period: Duration::new(64000, 0),
+            unbonding_period: Duration::new(128_000, 0),
+            max_clock_drift: Duration::new(3, 0),
+            latest_height: Height::new(1, 10).expect("Never fails"),
+            proof_specs: ProofSpecs::cosmos(),
+            upgrade_path: Vec::new(),
+            allow_update: AllowUpdate {
+                after_expiry: false,
+                after_misbehaviour: false,
+            },
+        };
+
+        let p = default_params.clone();
+
+        let client = ClientStateType::new(
+            p.id,
+            p.trust_level,
+            p.trusting_period,
+            p.unbonding_period,
+            p.max_clock_drift,
+            p.latest_height,
+            p.proof_specs,
+            p.upgrade_path,
+            p.allow_update,
+        )
+        .unwrap();
+
+        let client = ClientState::from(client);
+        let mut ctx: Ctx<TendermintClient> = Ctx {
+            client: client.clone(),
+            _marker: PhantomData,
+        };
+
+        client
+            .initialise(
+                &mut ctx,
+                &ClientId::new("my_client", 10).unwrap(),
+                dummy_sov_consensus_state(Timestamp::now()).into(),
+            )
+            .unwrap();
+    }
+}
