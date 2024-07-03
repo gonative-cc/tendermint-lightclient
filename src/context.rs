@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 use ibc_client_tendermint::client_state::ClientState;
 use ibc_core::client::context::consensus_state::ConsensusState as ConsensusStateTrait;
 use ibc_core::client::context::{ExtClientExecutionContext, ExtClientValidationContext};
+use ibc_core::primitives::Timestamp;
 use ibc_core::{
     client::{
         context::{
@@ -15,12 +16,13 @@ use ibc_core::{
 
 pub struct Ctx<C: ClientType> {
     client: C::ClientState,
+    consensus_state: C::ConsensusState,
     _marker: PhantomData<C>,
 }
 
 pub trait ClientType: Sized {
     type ClientState: ClientStateExecution<Ctx<Self>> + Clone;
-    type ConsensusState: ConsensusStateTrait;
+    type ConsensusState: ConsensusStateTrait + Clone;
 }
 
 impl<C: ClientType> ClientValidationContext for Ctx<C> {
@@ -30,7 +32,7 @@ impl<C: ClientType> ClientValidationContext for Ctx<C> {
 
     fn client_state(
         &self,
-        client_id: &ClientId,
+        _client_id: &ClientId,
     ) -> Result<Self::ClientStateRef, ibc_core::handler::types::error::ContextError> {
         Ok(self.client.clone())
     }
@@ -39,7 +41,7 @@ impl<C: ClientType> ClientValidationContext for Ctx<C> {
         &self,
         client_cons_state_path: &ibc_core::host::types::path::ClientConsensusStatePath,
     ) -> Result<Self::ConsensusStateRef, ibc_core::handler::types::error::ContextError> {
-        todo!()
+        Ok(self.consensus_state.clone())
     }
 
     fn client_update_meta(
@@ -68,7 +70,7 @@ impl<C: ClientType> ClientExecutionContext for Ctx<C> {
         client_state_path: ibc_core::host::types::path::ClientStatePath,
         client_state: Self::ClientStateRef,
     ) -> Result<(), ibc_core::handler::types::error::ContextError> {
-        todo!()
+        Ok(())
     }
 
     fn store_consensus_state(
@@ -76,7 +78,7 @@ impl<C: ClientType> ClientExecutionContext for Ctx<C> {
         consensus_state_path: ibc_core::host::types::path::ClientConsensusStatePath,
         consensus_state: Self::ConsensusStateRef,
     ) -> Result<(), ibc_core::handler::types::error::ContextError> {
-        todo!()
+        Ok(())
     }
 
     fn delete_consensus_state(
@@ -93,7 +95,7 @@ impl<C: ClientType> ClientExecutionContext for Ctx<C> {
         host_timestamp: ibc_core::primitives::Timestamp,
         host_height: Height,
     ) -> Result<(), ibc_core::handler::types::error::ContextError> {
-        todo!()
+        Ok(())
     }
 
     fn delete_update_meta(
@@ -110,11 +112,12 @@ impl<C: ClientType> ExtClientValidationContext for Ctx<C> {
         &self,
     ) -> Result<ibc_core::primitives::Timestamp, ibc_core::handler::types::error::ContextError>
     {
-        todo!()
+        Ok(Timestamp::now())
     }
 
     fn host_height(&self) -> Result<Height, ibc_core::handler::types::error::ContextError> {
-        todo!()
+        let h = Height::new(0, 12)?;
+        Ok(h)
     }
 
     fn consensus_state_heights(
@@ -164,7 +167,7 @@ mod tests {
         host::types::identifiers::ChainId,
         primitives::Timestamp,
     };
-    use tendermint::Hash;
+    use tendermint::{serializers::timestamp, Hash};
 
     #[derive(Clone, Debug, PartialEq)]
     pub struct ClientStateParams {
@@ -222,8 +225,10 @@ mod tests {
         .unwrap();
 
         let client = ClientState::from(client);
+        let consensus_state = dummy_sov_consensus_state(Timestamp::now());
         let mut ctx: Ctx<TendermintClient> = Ctx {
             client: client.clone(),
+            consensus_state: consensus_state.into(),
             _marker: PhantomData,
         };
 
