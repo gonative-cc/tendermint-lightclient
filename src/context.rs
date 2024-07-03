@@ -160,6 +160,7 @@ mod tests {
     use crate::{api::TendermintClient};
 
     use super::{ClientType, *};
+    use base64::Engine;
     use ibc_client_tendermint::{
         consensus_state::{self, ConsensusState},
         types::{
@@ -177,6 +178,8 @@ mod tests {
     use tendermint::{block::header, serializers::timestamp, time::Time, Hash};
     use tendermint_testgen::{Generator, Validator};
 
+    use base64::{engine::general_purpose, Engine as _};
+
     /// Test fixture
     #[derive(Clone, Debug)]
     pub struct Fixture {
@@ -189,9 +192,9 @@ mod tests {
     impl Default for Fixture {
         fn default() -> Self {
             Fixture {
-                chain_id: ChainId::new("ibc-1").unwrap(),
+                chain_id: ChainId::new("chain2").unwrap(),
                 trusted_timestamp: Timestamp::now(),
-                trusted_height: Height::new(1, 10).unwrap(),
+                trusted_height: Height::new(0, 6).unwrap(),
                 validators: vec![
                     Validator::new("1").voting_power(40),
                     Validator::new("2").voting_power(30),
@@ -240,13 +243,16 @@ mod tests {
         pub upgrade_path: Vec<String>,
         pub allow_update: AllowUpdate,
     }
-
-    pub fn dummy_sov_consensus_state(timestamp: Timestamp) -> ConsensusStateType {
+    
+    pub fn base64_to_bytes(base64_str: &str) -> Vec<u8> {
+        base64::engine::general_purpose::STANDARD.decode(base64_str). unwrap()
+    }
+    pub fn dummy_sov_consensus_state() -> ConsensusStateType {
         ConsensusStateType::new(
-            vec![0].into(),
-            timestamp.into_tm_time().expect("Time exists"),
+            base64_to_bytes("EIP4I6oX9Nf8icn2zA11HBeAwjEfabYIUsw9TDd/2iI="). into(),
+            Time::from_str(&"2023-03-10T11:56:35.188345Z").expect("not failed"),
             // Hash of default validator set
-            Hash::from_str("D6B93922C33AAEBEC9043566CB4B1B48365B1358B67C7DEF986D9EE1861BC143")
+            Hash::from_str("46DED613D8C7893433B18818CF0FF8D2E918F9A3CE824CAD76FDDAC1F1BAFAF5")
                 .expect("Never fails"),
         )
     }
@@ -254,17 +260,20 @@ mod tests {
     #[test]
     fn it_works() {
         let default_params: ClientStateParams = ClientStateParams {
-            id: ChainId::new("ibc-1").unwrap(),
+            id: ChainId::new("chain2").unwrap(),
             trust_level: TrustThreshold::ONE_THIRD,
-            trusting_period: Duration::new(64000, 0),
-            unbonding_period: Duration::new(128_000, 0),
-            max_clock_drift: Duration::new(3, 0),
-            latest_height: Height::new(1, 10).expect("Never fails"),
+            trusting_period: Duration::new(1209600, 0),
+            unbonding_period: Duration::new(1814400, 0),
+            max_clock_drift: Duration::new(40, 0),
+            latest_height: Height::new(0, 6).expect("Never fails"),
             proof_specs: ProofSpecs::cosmos(),
-            upgrade_path: Vec::new(),
+            upgrade_path: vec![
+                "upgrade".to_string(),
+                "upgradedIBCState".to_string()
+              ],
             allow_update: AllowUpdate {
-                after_expiry: false,
-                after_misbehaviour: false,
+                after_expiry: true,
+                after_misbehaviour: true,
             },
         };
 
@@ -284,7 +293,7 @@ mod tests {
         .unwrap();
 
         let client = ClientState::from(client);
-        let consensus_state = dummy_sov_consensus_state(Timestamp::now());
+        let consensus_state = dummy_sov_consensus_state();
         let mut ctx: Ctx<TendermintClient> = Ctx {
             client: client.clone(),
             consensus_state: consensus_state.into(),
@@ -296,18 +305,18 @@ mod tests {
             .initialise(
                 &mut ctx,
                 &client_id,
-                dummy_sov_consensus_state(Timestamp::now()).into(),
+                dummy_sov_consensus_state().into(),
             )
             .unwrap();
 
-        let any = Fixture::default()
+        let header = Fixture::default()
             .dummy_client_message(Height::new(1,10).unwrap())
             .clone();
 
-        // client
-        //     .verify_client_message(&ctx, &client_id, any.clone().into())
-        //     .unwrap();
+        client
+            .verify_client_message(&ctx, &client_id, header.clone().into())
+            .unwrap();
 
-        client.update_state(&mut ctx , &client_id, any.into()).unwrap();
+        // client.update_state(&mut ctx , &client_id, any.into()).unwrap();
     }
 }

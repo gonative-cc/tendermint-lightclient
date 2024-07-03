@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 ibc-core = "0.53.0"
 ibc-client-tendermint = "0.53.0"
+base64 = "0.22.1"
 
 [dev-dependencies]
 tendermint = "0.36.0"
