@@ -126,7 +126,7 @@ impl<C: ClientType> ExtClientValidationContext for Ctx<C> {
         &self,
     ) -> Result<ibc_core::primitives::Timestamp, ibc_core::handler::types::error::ContextError>
     {
-        // TODO: mock it
+        // TODO: mock it, this must return host time
         Ok(Time::from_str("2023-03-10T13:59:35.188345Z")
             .unwrap()
             .into())
@@ -182,8 +182,8 @@ mod tests {
 
     use ibc_core::{commitment_types::specs::ProofSpecs, host::types::identifiers::ChainId};
     use tendermint::{time::Time, Hash};
-
    
+    // TODO: Get msg from protobuf
     fn get_header() -> Header {
         serde_json::from_str::<Header>(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -210,6 +210,7 @@ mod tests {
             .decode(base64_str)
             .unwrap()
     }
+
     pub fn dummy_consensus_state() -> ConsensusStateType {
         ConsensusStateType::new(
             base64_to_bytes("EIP4I6oX9Nf8icn2zA11HBeAwjEfabYIUsw9TDd/2iI=").into(),
@@ -221,7 +222,7 @@ mod tests {
     }
 
     #[test]
-    fn it_works() {
+    fn verify_client_message() {
         let params: ClientStateParams = ClientStateParams {
             id: ChainId::new("chain2").unwrap(),
             trust_level: TrustThreshold::ONE_THIRD,
