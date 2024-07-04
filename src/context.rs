@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::marker::PhantomData;
+use std::str::FromStr;
 
 use ibc_client_tendermint::client_state::ClientState;
 use ibc_core::client::context::consensus_state::ConsensusState as ConsensusStateTrait;
@@ -15,6 +16,7 @@ use ibc_core::{
     },
     host::types::identifiers::ClientId,
 };
+use tendermint::Time;
 
 pub struct Ctx<C: ClientType> {
     client: C::ClientState,
@@ -118,7 +120,7 @@ impl<C: ClientType> ExtClientValidationContext for Ctx<C> {
         &self,
     ) -> Result<ibc_core::primitives::Timestamp, ibc_core::handler::types::error::ContextError>
     {
-        Ok(Timestamp::now())
+        Ok(Time::from_str(&"2023-03-10T13:59:35.188345Z").unwrap().into())
     }
 
     fn host_height(&self) -> Result<Height, ibc_core::handler::types::error::ContextError> {
@@ -191,17 +193,25 @@ mod tests {
 
     impl Default for Fixture {
         fn default() -> Self {
+            println!("{:?}", Validator::new("1").voting_power(12));
             Fixture {
                 chain_id: ChainId::new("chain2").unwrap(),
                 trusted_timestamp: Timestamp::now(),
                 trusted_height: Height::new(0, 6).unwrap(),
                 validators: vec![
-                    Validator::new("1").voting_power(40),
+                    Validator::new("1").voting_power(20),
                     Validator::new("2").voting_power(30),
                     Validator::new("3").voting_power(30),
                 ],
             }
         }
+    }
+
+    fn get_header() -> Header {
+        serde_json::from_str::<Header>(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/data/header.json"
+        ))).unwrap()
     }
 
     impl Fixture {
@@ -309,14 +319,12 @@ mod tests {
             )
             .unwrap();
 
-        let header = Fixture::default()
-            .dummy_client_message(Height::new(1,10).unwrap())
-            .clone();
+        let header = get_header();
 
         client
             .verify_client_message(&ctx, &client_id, header.clone().into())
             .unwrap();
 
-        // client.update_state(&mut ctx , &client_id, any.into()).unwrap();
+        // client.update_state(&mut ctx , &client_id, header.into()).unwrap();
     }
 }
