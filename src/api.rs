@@ -8,4 +8,3 @@ impl ClientType for TendermintClient {
     type ClientState = ClientState;
     type ConsensusState = ConsensusState;
 }
-
