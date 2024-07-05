@@ -1,6 +1,3 @@
-use std::marker::PhantomData;
-use std::str::FromStr;
-
 use ibc_core::client::context::consensus_state::ConsensusState as ConsensusStateTrait;
 use ibc_core::client::context::ExtClientValidationContext;
 
@@ -15,23 +12,20 @@ use ibc_core::{
 };
 use tendermint::Time;
 
-#[derive(Debug)]
-pub struct Ctx<C: ClientType> {
-    client: Option<C::ClientState>,
-    consensus_state: Option<C::ConsensusState>,
-    _marker: PhantomData<C>,
-}
+use crate::storage::{Direction, Storage};
 
+pub struct Ctx<C: ClientType> {
+    storage: Storage<C>,
+}
 
 impl<C: ClientType> Default for Ctx<C> {
     fn default() -> Self {
         Self {
-            client: None,
-            consensus_state:None,
-            _marker: PhantomData
+            storage: Storage::default(),
         }
     }
 }
+
 pub trait ClientType: Sized {
     type ClientState: ClientStateExecution<Ctx<Self>> + Clone;
     type ConsensusState: ConsensusStateTrait + Clone;
@@ -46,14 +40,14 @@ impl<C: ClientType> ClientValidationContext for Ctx<C> {
         &self,
         _client_id: &ClientId,
     ) -> Result<Self::ClientStateRef, ibc_core::handler::types::error::ContextError> {
-        Ok(self.client.clone().unwrap())
+        Ok(self.storage.client_state.clone().unwrap())
     }
 
     fn consensus_state(
         &self,
         _client_cons_state_path: &ibc_core::host::types::path::ClientConsensusStatePath,
     ) -> Result<Self::ConsensusStateRef, ibc_core::handler::types::error::ContextError> {
-        Ok(self.consensus_state.clone().unwrap())
+        Ok(self.storage.consensus_state.clone().unwrap())
     }
 
     fn client_update_meta(
@@ -82,7 +76,7 @@ impl<C: ClientType> ClientExecutionContext for Ctx<C> {
         _client_state_path: ibc_core::host::types::path::ClientStatePath,
         client_state: Self::ClientStateRef,
     ) -> Result<(), ibc_core::handler::types::error::ContextError> {
-        self.client = Some(client_state);
+        self.storage.client_state = Some(client_state);
         Ok(())
     }
 
@@ -91,7 +85,7 @@ impl<C: ClientType> ClientExecutionContext for Ctx<C> {
         _consensus_state_path: ibc_core::host::types::path::ClientConsensusStatePath,
         consensus_state: Self::ConsensusStateRef,
     ) -> Result<(), ibc_core::handler::types::error::ContextError> {
-        self.consensus_state = Some(consensus_state);
+        self.storage.consensus_state = Some(consensus_state);
         Ok(())
     }
 
@@ -138,25 +132,27 @@ impl<C: ClientType> ExtClientValidationContext for Ctx<C> {
         &self,
         _client_id: &ClientId,
     ) -> Result<Vec<Height>, ibc_core::handler::types::error::ContextError> {
-        todo!()
+        Ok(self.storage.get_heights())
     }
 
     fn next_consensus_state(
         &self,
         _client_id: &ClientId,
-        _height: &Height,
+        height: &Height,
     ) -> Result<Option<Self::ConsensusStateRef>, ibc_core::handler::types::error::ContextError>
     {
-        todo!()
+        Ok(self.storage.get_adjacent_height(height, Direction::Next))
     }
 
     fn prev_consensus_state(
         &self,
         _client_id: &ClientId,
-        _height: &Height,
+        height: &Height,
     ) -> Result<Option<Self::ConsensusStateRef>, ibc_core::handler::types::error::ContextError>
     {
-        todo!()
+        Ok(self
+            .storage
+            .get_adjacent_height(height, Direction::Previous))
     }
 }
 
@@ -164,23 +160,25 @@ impl<C: ClientType> ExtClientValidationContext for Ctx<C> {
 mod tests {
     use super::*;
 
-    use std::time::Duration;
+    use std::{str::FromStr, time::Duration};
 
     use crate::api::TendermintClient;
 
-
     use base64::Engine;
-    use ibc_client_tendermint::{client_state::ClientState, types::{
-        AllowUpdate, ClientState as ClientStateType, ConsensusState as ConsensusStateType, Header,
-        TrustThreshold,
-    }};
+    use ibc_client_tendermint::{
+        client_state::ClientState,
+        types::{
+            AllowUpdate, ClientState as ClientStateType, ConsensusState as ConsensusStateType,
+            Header, TrustThreshold,
+        },
+    };
 
     use ibc_core::client::context::client_state::ClientStateValidation;
 
     use ibc_core::{commitment_types::specs::ProofSpecs, host::types::identifiers::ChainId};
-    use serde::Serialize;
+
     use tendermint::{time::Time, Hash};
-   
+
     // TODO: Get msg from protobuf
     fn get_header() -> Header {
         serde_json::from_str::<Header>(include_str!(concat!(
@@ -264,7 +262,9 @@ mod tests {
         let header = get_header();
 
         client
-            .verify_client_message(&ctx, &client_id, header.into())
-        .expect("Not fails")
+            .verify_client_message(&ctx, &client_id, header.clone().into())
+            .expect("Not fails");
+
+        client.update_state(&mut ctx, &client_id, header.into()).expect("Not fails");
     }
 }
