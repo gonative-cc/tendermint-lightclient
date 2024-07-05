@@ -126,10 +126,7 @@ impl<C: ClientType> ExtClientValidationContext for Ctx<C> {
         &self,
     ) -> Result<ibc_core::primitives::Timestamp, ibc_core::handler::types::error::ContextError>
     {
-        // TODO: mock it, this must return host time
-        Ok(Time::from_str("2023-03-10T13:59:35.188345Z")
-            .unwrap()
-            .into())
+        Ok(Time::now().into())
     }
 
     fn host_height(&self) -> Result<Height, ibc_core::handler::types::error::ContextError> {
@@ -181,6 +178,7 @@ mod tests {
     use ibc_core::client::context::client_state::ClientStateValidation;
 
     use ibc_core::{commitment_types::specs::ProofSpecs, host::types::identifiers::ChainId};
+    use serde::Serialize;
     use tendermint::{time::Time, Hash};
    
     // TODO: Get msg from protobuf
@@ -223,11 +221,13 @@ mod tests {
 
     #[test]
     fn verify_client_message() {
+        let five_year = 5 * 365 * 24 * 60 * 60;
+
         let params: ClientStateParams = ClientStateParams {
             id: ChainId::new("chain2").unwrap(),
             trust_level: TrustThreshold::ONE_THIRD,
-            trusting_period: Duration::new(1209600, 0),
-            unbonding_period: Duration::new(1814400, 0),
+            trusting_period: Duration::new(five_year, 0),
+            unbonding_period: Duration::new(five_year + 1, 0),
             max_clock_drift: Duration::new(40, 0),
             latest_height: Height::new(0, 6).expect("Never fails"),
             proof_specs: ProofSpecs::cosmos(),
@@ -262,6 +262,7 @@ mod tests {
             .expect("Not fails");
 
         let header = get_header();
+
         client
             .verify_client_message(&ctx, &client_id, header.into())
         .expect("Not fails")
