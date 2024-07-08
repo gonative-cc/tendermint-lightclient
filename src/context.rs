@@ -85,9 +85,11 @@ impl<C: ClientType> ClientValidationContext for Ctx<C> {
 impl<C: ClientType> ClientExecutionContext for Ctx<C> {
     fn client_state_mut(
         &self,
-        _client_id: &ibc_core::host::types::identifiers::ClientId,
+        client_id: &ibc_core::host::types::identifiers::ClientId,
     ) -> Result<Self::ClientStateMut, ContextError> {
-        todo!()
+        //TODO: check client mut actual "mut"
+        //If we only listen and verify message this api doesn't require
+        self.client_state(client_id)
     }
 
     type ClientStateMut = C::ClientState;
