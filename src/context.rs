@@ -45,7 +45,7 @@ impl<C: ClientType> ClientValidationContext for Ctx<C> {
         &self,
         client_cons_state_path: &ibc_core::host::types::path::ClientConsensusStatePath,
     ) -> Result<Self::ConsensusStateRef, ContextError> {
-        // println!("{}", client_cons_state_path.leaf());
+     
         let cons_state = self
             .storage
             .consensus_state
@@ -106,9 +106,10 @@ impl<C: ClientType> ClientExecutionContext for Ctx<C> {
 
     fn delete_consensus_state(
         &mut self,
-        _consensus_state_path: ibc_core::host::types::path::ClientConsensusStatePath,
+        consensus_state_path: ibc_core::host::types::path::ClientConsensusStatePath,
     ) -> Result<(), ContextError> {
-        todo!()
+        self.storage.consensus_state.remove(&consensus_state_path.leaf());
+        Ok(())
     }
 
     fn store_update_meta(
@@ -118,7 +119,6 @@ impl<C: ClientType> ClientExecutionContext for Ctx<C> {
         _host_timestamp: ibc_core::primitives::Timestamp,
         _host_height: Height,
     ) -> Result<(), ContextError> {
-        // self.storage.current_height = Some()
         Ok(())
     }
 
@@ -127,7 +127,7 @@ impl<C: ClientType> ClientExecutionContext for Ctx<C> {
         _client_id: ibc_core::host::types::identifiers::ClientId,
         _height: Height,
     ) -> Result<(), ContextError> {
-        todo!()
+        Ok(()) 
     }
 }
 
@@ -273,9 +273,9 @@ mod tests {
             .verify_client_message(&ctx, &client_id, header.clone().into())
             .expect("Not fails");
 
+        // update don't check status of header. We need verify it first in logic.
         client
             .update_state(&mut ctx, &client_id, header.into())
             .expect("Not fails");
-
     }
 }
