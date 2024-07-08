@@ -75,7 +75,7 @@ impl<C: ClientType> ClientValidationContext for Ctx<C> {
             Some(meta) => Ok(meta.to_owned()),
             None => Err(ClientError::UpdateMetaDataNotFound {
                 client_id: client_id.clone(),
-                height: height.clone(),
+                height: *height,
             }
             .into()),
         }
