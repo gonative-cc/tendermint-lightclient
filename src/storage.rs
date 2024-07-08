@@ -3,7 +3,7 @@ use std::{
     ops::Bound,
 };
 
-use ibc_core::client::types::Height;
+use ibc_core::{client::types::Height, host::types::path::ClientConsensusStatePath};
 
 use crate::context::ClientType;
 
@@ -14,16 +14,18 @@ pub enum Direction {
 
 #[derive(Clone)]
 pub struct Storage<C: ClientType> {
+    pub current_height: Option<Height>,
     pub client_state: Option<C::ClientState>,
-    pub consensus_state: Option<C::ConsensusState>,
+    pub consensus_state: HashMap<String, C::ConsensusState>,
     pub consensus_state_height_map: BTreeMap<Height, C::ConsensusState>,
 }
 
 impl<C: ClientType> Default for Storage<C> {
     fn default() -> Self {
         Self {
+            current_height: None,
             client_state: None,
-            consensus_state: None,
+            consensus_state: HashMap::new(),
             consensus_state_height_map: BTreeMap::new(),
         }
     }

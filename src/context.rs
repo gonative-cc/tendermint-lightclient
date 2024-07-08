@@ -1,6 +1,7 @@
 use ibc_core::client::context::consensus_state::ConsensusState as ConsensusStateTrait;
 use ibc_core::client::context::ExtClientValidationContext;
 
+use ibc_core::handler::types::error::ContextError;
 use ibc_core::{
     client::{
         context::{
@@ -36,36 +37,48 @@ impl<C: ClientType> ClientValidationContext for Ctx<C> {
 
     type ConsensusStateRef = C::ConsensusState;
 
-    fn client_state(
-        &self,
-        _client_id: &ClientId,
-    ) -> Result<Self::ClientStateRef, ibc_core::handler::types::error::ContextError> {
+    fn client_state(&self, _client_id: &ClientId) -> Result<Self::ClientStateRef, ContextError> {
         Ok(self.storage.client_state.clone().unwrap())
     }
 
     fn consensus_state(
         &self,
-        _client_cons_state_path: &ibc_core::host::types::path::ClientConsensusStatePath,
-    ) -> Result<Self::ConsensusStateRef, ibc_core::handler::types::error::ContextError> {
-        Ok(self.storage.consensus_state.clone().unwrap())
+        client_cons_state_path: &ibc_core::host::types::path::ClientConsensusStatePath,
+    ) -> Result<Self::ConsensusStateRef, ContextError> {
+        // println!("{}", client_cons_state_path.leaf());
+        let cons_state = self
+            .storage
+            .consensus_state
+            .get(&client_cons_state_path.leaf());
+        match cons_state {
+            Some(state) => Ok(state.to_owned()),
+            None => Err(ContextError::ClientError(
+                ibc_core::client::types::error::ClientError::ConsensusStateNotFound {
+                    client_id: client_cons_state_path.clone().client_id,
+                    height: Height::new(
+                        client_cons_state_path.revision_number,
+                        client_cons_state_path.revision_height,
+                    )
+                    .unwrap(),
+                },
+            )),
+        }
     }
 
     fn client_update_meta(
         &self,
         _client_id: &ibc_core::host::types::identifiers::ClientId,
         _height: &ibc_core::client::types::Height,
-    ) -> Result<
-        (ibc_core::primitives::Timestamp, Height),
-        ibc_core::handler::types::error::ContextError,
-    > {
+    ) -> Result<(ibc_core::primitives::Timestamp, Height), ContextError> {
         todo!()
     }
 }
+
 impl<C: ClientType> ClientExecutionContext for Ctx<C> {
     fn client_state_mut(
         &self,
         _client_id: &ibc_core::host::types::identifiers::ClientId,
-    ) -> Result<Self::ClientStateMut, ibc_core::handler::types::error::ContextError> {
+    ) -> Result<Self::ClientStateMut, ContextError> {
         todo!()
     }
 
@@ -75,24 +88,26 @@ impl<C: ClientType> ClientExecutionContext for Ctx<C> {
         &mut self,
         _client_state_path: ibc_core::host::types::path::ClientStatePath,
         client_state: Self::ClientStateRef,
-    ) -> Result<(), ibc_core::handler::types::error::ContextError> {
+    ) -> Result<(), ContextError> {
         self.storage.client_state = Some(client_state);
         Ok(())
     }
 
     fn store_consensus_state(
         &mut self,
-        _consensus_state_path: ibc_core::host::types::path::ClientConsensusStatePath,
+        consensus_state_path: ibc_core::host::types::path::ClientConsensusStatePath,
         consensus_state: Self::ConsensusStateRef,
-    ) -> Result<(), ibc_core::handler::types::error::ContextError> {
-        self.storage.consensus_state = Some(consensus_state);
+    ) -> Result<(), ContextError> {
+        self.storage
+            .consensus_state
+            .insert(consensus_state_path.leaf(), consensus_state);
         Ok(())
     }
 
     fn delete_consensus_state(
         &mut self,
         _consensus_state_path: ibc_core::host::types::path::ClientConsensusStatePath,
-    ) -> Result<(), ibc_core::handler::types::error::ContextError> {
+    ) -> Result<(), ContextError> {
         todo!()
     }
 
@@ -102,7 +117,8 @@ impl<C: ClientType> ClientExecutionContext for Ctx<C> {
         _height: Height,
         _host_timestamp: ibc_core::primitives::Timestamp,
         _host_height: Height,
-    ) -> Result<(), ibc_core::handler::types::error::ContextError> {
+    ) -> Result<(), ContextError> {
+        // self.storage.current_height = Some()
         Ok(())
     }
 
@@ -110,28 +126,22 @@ impl<C: ClientType> ClientExecutionContext for Ctx<C> {
         &mut self,
         _client_id: ibc_core::host::types::identifiers::ClientId,
         _height: Height,
-    ) -> Result<(), ibc_core::handler::types::error::ContextError> {
+    ) -> Result<(), ContextError> {
         todo!()
     }
 }
 
 impl<C: ClientType> ExtClientValidationContext for Ctx<C> {
-    fn host_timestamp(
-        &self,
-    ) -> Result<ibc_core::primitives::Timestamp, ibc_core::handler::types::error::ContextError>
-    {
+    fn host_timestamp(&self) -> Result<ibc_core::primitives::Timestamp, ContextError> {
         Ok(Time::now().into())
     }
 
-    fn host_height(&self) -> Result<Height, ibc_core::handler::types::error::ContextError> {
-        let h = Height::new(0, 12)?;
+    fn host_height(&self) -> Result<Height, ContextError> {
+        let h = Height::new(0, 1)?;
         Ok(h)
     }
 
-    fn consensus_state_heights(
-        &self,
-        _client_id: &ClientId,
-    ) -> Result<Vec<Height>, ibc_core::handler::types::error::ContextError> {
+    fn consensus_state_heights(&self, _client_id: &ClientId) -> Result<Vec<Height>, ContextError> {
         Ok(self.storage.get_heights())
     }
 
@@ -139,8 +149,7 @@ impl<C: ClientType> ExtClientValidationContext for Ctx<C> {
         &self,
         _client_id: &ClientId,
         height: &Height,
-    ) -> Result<Option<Self::ConsensusStateRef>, ibc_core::handler::types::error::ContextError>
-    {
+    ) -> Result<Option<Self::ConsensusStateRef>, ContextError> {
         Ok(self.storage.get_adjacent_height(height, Direction::Next))
     }
 
@@ -148,8 +157,7 @@ impl<C: ClientType> ExtClientValidationContext for Ctx<C> {
         &self,
         _client_id: &ClientId,
         height: &Height,
-    ) -> Result<Option<Self::ConsensusStateRef>, ibc_core::handler::types::error::ContextError>
-    {
+    ) -> Result<Option<Self::ConsensusStateRef>, ContextError> {
         Ok(self
             .storage
             .get_adjacent_height(height, Direction::Previous))
@@ -265,6 +273,9 @@ mod tests {
             .verify_client_message(&ctx, &client_id, header.clone().into())
             .expect("Not fails");
 
-        client.update_state(&mut ctx, &client_id, header.into()).expect("Not fails");
+        client
+            .update_state(&mut ctx, &client_id, header.into())
+            .expect("Not fails");
+
     }
 }
