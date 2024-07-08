@@ -3,7 +3,7 @@ use std::{
     ops::Bound,
 };
 
-use ibc_core::{client::types::Height, host::types::path::ClientConsensusStatePath};
+use ibc_core::{client::types::Height, primitives::Timestamp};
 
 use crate::context::ClientType;
 
@@ -18,6 +18,7 @@ pub struct Storage<C: ClientType> {
     pub client_state: Option<C::ClientState>,
     pub consensus_state: HashMap<String, C::ConsensusState>,
     pub consensus_state_height_map: BTreeMap<Height, C::ConsensusState>,
+    pub update_meta: HashMap<Height, (Timestamp, Height)>,
 }
 
 impl<C: ClientType> Default for Storage<C> {
@@ -27,6 +28,7 @@ impl<C: ClientType> Default for Storage<C> {
             client_state: None,
             consensus_state: HashMap::new(),
             consensus_state_height_map: BTreeMap::new(),
+            update_meta: HashMap::new(),
         }
     }
 }

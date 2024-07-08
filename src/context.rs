@@ -1,7 +1,9 @@
 use ibc_core::client::context::consensus_state::ConsensusState as ConsensusStateTrait;
 use ibc_core::client::context::ExtClientValidationContext;
 
+use ibc_core::client::types::error::ClientError;
 use ibc_core::handler::types::error::ContextError;
+
 use ibc_core::{
     client::{
         context::{
@@ -45,7 +47,6 @@ impl<C: ClientType> ClientValidationContext for Ctx<C> {
         &self,
         client_cons_state_path: &ibc_core::host::types::path::ClientConsensusStatePath,
     ) -> Result<Self::ConsensusStateRef, ContextError> {
-     
         let cons_state = self
             .storage
             .consensus_state
@@ -67,10 +68,17 @@ impl<C: ClientType> ClientValidationContext for Ctx<C> {
 
     fn client_update_meta(
         &self,
-        _client_id: &ibc_core::host::types::identifiers::ClientId,
-        _height: &ibc_core::client::types::Height,
+        client_id: &ibc_core::host::types::identifiers::ClientId,
+        height: &ibc_core::client::types::Height,
     ) -> Result<(ibc_core::primitives::Timestamp, Height), ContextError> {
-        todo!()
+        match self.storage.update_meta.get(height) {
+            Some(meta) => Ok(meta.to_owned()),
+            None => Err(ClientError::UpdateMetaDataNotFound {
+                client_id: client_id.clone(),
+                height: height.clone(),
+            }
+            .into()),
+        }
     }
 }
 
@@ -108,26 +116,32 @@ impl<C: ClientType> ClientExecutionContext for Ctx<C> {
         &mut self,
         consensus_state_path: ibc_core::host::types::path::ClientConsensusStatePath,
     ) -> Result<(), ContextError> {
-        self.storage.consensus_state.remove(&consensus_state_path.leaf());
+        self.storage
+            .consensus_state
+            .remove(&consensus_state_path.leaf());
         Ok(())
     }
 
     fn store_update_meta(
         &mut self,
         _client_id: ibc_core::host::types::identifiers::ClientId,
-        _height: Height,
-        _host_timestamp: ibc_core::primitives::Timestamp,
-        _host_height: Height,
+        height: Height,
+        host_timestamp: ibc_core::primitives::Timestamp,
+        host_height: Height,
     ) -> Result<(), ContextError> {
+        self.storage
+            .update_meta
+            .insert(height, (host_timestamp, host_height));
         Ok(())
     }
 
     fn delete_update_meta(
         &mut self,
         _client_id: ibc_core::host::types::identifiers::ClientId,
-        _height: Height,
+        height: Height,
     ) -> Result<(), ContextError> {
-        Ok(()) 
+        self.storage.update_meta.remove(&height);
+        Ok(())
     }
 }
 
