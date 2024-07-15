@@ -1,5 +1,8 @@
 use futures::executor::block_on;
-use ibc_client_tendermint::{consensus_state::ConsensusState, types::{ConsensusState as ConsensusStateType, Header}};
+use ibc_client_tendermint::{
+    consensus_state::ConsensusState,
+    types::{ConsensusState as ConsensusStateType, Header},
+};
 use ibc_core::{client::types::Height, commitment_types::commitment::CommitmentRoot};
 use tendermint::{
     account::Id,
@@ -10,7 +13,6 @@ use tendermint::{
     proposal,
 };
 use tendermint_rpc::{Client, HttpClient, Paging, Url};
-
 
 pub struct LightClientProvider {
     provider: HttpClient,
@@ -31,9 +33,9 @@ impl LightClientProvider {
         let root = block.block.header.app_hash;
 
         ConsensusState::from(ConsensusStateType {
-            next_validators_hash, 
+            next_validators_hash,
             root: CommitmentRoot::from_bytes(root.as_bytes()),
-            timestamp 
+            timestamp,
         })
     }
 
