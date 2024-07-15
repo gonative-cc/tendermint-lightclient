@@ -33,7 +33,7 @@ impl LightClientProvider {
         ConsensusState::from(ConsensusStateType {
             next_validators_hash, 
             root: CommitmentRoot::from_bytes(root.as_bytes()),
-            timestamp
+            timestamp 
         })
     }
 
@@ -42,7 +42,7 @@ impl LightClientProvider {
 
         Header {
             signed_header: signed_header.clone(),
-            trusted_height: Height::new(0, 12).unwrap(),
+            trusted_height: Height::new(0, 6).unwrap(),
             trusted_next_validator_set: self.get_validator_set(height + 1, None).await,
             validator_set: self
                 .get_validator_set(height, Some(signed_header.header.proposer_address))
