@@ -289,6 +289,7 @@ mod tests {
             .verify_client_message(&ctx, &client_id, header.clone().into())
             .expect("Not fails");
 
+        
         // update don't check status of header. We need verify it first in logic.
         client
             .update_state(&mut ctx, &client_id, header.into())

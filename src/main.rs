@@ -1,10 +1,9 @@
 mod api;
 mod context;
 mod storage;
+mod client;
 
-//TODO: init client here
-// Verify client message
-// Update state
+
 fn main() {
     println!("Halo Halo!!!");
 }
