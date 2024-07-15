@@ -1,34 +1,70 @@
+use futures::executor::block_on;
 use ibc_client_tendermint::types::Header;
-use tendermint::block::{self, signed_header::SignedHeader, Height};
-use tendermint_rpc::{Client, HttpClient, Url};
+use ibc_core::client::types::Height;
+use tendermint::{
+    account::Id,
+    block::{
+        self,
+        signed_header::{self, SignedHeader},
+    },
+    proposal,
+};
+use tendermint_rpc::{Client, HttpClient, Paging, Url};
 use tendermint_testgen::ValidatorSet;
 
 pub struct LightClientProvider {
-    url: Url,
+    provider: HttpClient,
 }
 
 impl LightClientProvider {
     pub fn new(url: Url) -> Self {
-        Self { url }
+        Self {
+            provider: HttpClient::new(url.clone()).unwrap(),
+        }
     }
 
-    pub async fn get_signed_header(height: u32) -> SignedHeader {
-        todo!()
+    pub async fn light_header(&self, height: u32) -> Header {
+        let signed_header = self.get_signed_header(height).await;
+
+        Header {
+            signed_header: signed_header.clone(),
+            trusted_height: Height::new(0, 12).unwrap(),
+            trusted_next_validator_set: self.get_validator_set(height + 1, None).await,
+            validator_set: self
+                .get_validator_set(height, Some(signed_header.header.proposer_address))
+                .await,
+        }
     }
 
-    pub async fn get_validator_set() -> ValidatorSet {
-        todo!()
+    pub async fn latest_height(&self) -> u64 {
+        let block = self.provider.latest_block_results().await;
+        block.unwrap().height.into()
     }
 
-    pub async fn get_trusted_next_validator_set() -> ValidatorSet {
-        todo!()
+    pub async fn get_signed_header(&self, height: u32) -> SignedHeader {
+        let commit = self.provider.commit(height).await;
+        commit.unwrap().signed_header
     }
-    
+
+    pub async fn get_validator_set(
+        &self,
+        height: u32,
+        proposer: Option<Id>,
+    ) -> tendermint::validator::Set {
+        let validators = self.provider.validators(height, Paging::All).await.unwrap();
+        match proposer {
+            Some(proposer_id) => {
+                tendermint::validator::Set::with_proposer(validators.validators, proposer_id)
+                    .unwrap()
+            }
+            None => tendermint::validator::Set::without_proposer(validators.validators),
+        }
+    }
+
     pub async fn fetch_block(&self) {
-        let client = HttpClient::new(self.url.clone()).unwrap();
-        let ans = client.latest_block().await.unwrap();
+        let ans = self.provider.latest_block().await.unwrap();
         println!("{:#?}", ans.block);
-    }   
+    }
 }
 
 #[cfg(test)]
