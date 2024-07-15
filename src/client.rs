@@ -1,6 +1,6 @@
 use futures::executor::block_on;
-use ibc_client_tendermint::types::Header;
-use ibc_core::client::types::Height;
+use ibc_client_tendermint::{consensus_state::ConsensusState, types::{ConsensusState as ConsensusStateType, Header}};
+use ibc_core::{client::types::Height, commitment_types::commitment::CommitmentRoot};
 use tendermint::{
     account::Id,
     block::{
@@ -10,7 +10,7 @@ use tendermint::{
     proposal,
 };
 use tendermint_rpc::{Client, HttpClient, Paging, Url};
-use tendermint_testgen::ValidatorSet;
+
 
 pub struct LightClientProvider {
     provider: HttpClient,
@@ -21,6 +21,20 @@ impl LightClientProvider {
         Self {
             provider: HttpClient::new(url.clone()).unwrap(),
         }
+    }
+
+    pub async fn consensus_state(&self, height: u32) -> ConsensusState {
+        let block = self.provider.block(height).await.unwrap();
+
+        let timestamp = block.block.header.time;
+        let next_validators_hash = block.block.header.next_validators_hash;
+        let root = block.block.header.app_hash;
+
+        ConsensusState::from(ConsensusStateType {
+            next_validators_hash, 
+            root: CommitmentRoot::from_bytes(root.as_bytes()),
+            timestamp
+        })
     }
 
     pub async fn light_header(&self, height: u32) -> Header {
@@ -69,8 +83,6 @@ impl LightClientProvider {
 
 #[cfg(test)]
 mod provider_test {
-    use tendermint_rpc::Url;
-
     use super::LightClientProvider;
 
     #[tokio::test]

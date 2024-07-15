@@ -5,5 +5,5 @@ mod client;
 
 
 fn main() {
-    println!("Halo Halo!!!");
+    
 }
