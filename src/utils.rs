@@ -1,5 +1,6 @@
+// gen_test_data help us create data for test cli. 
 #[cfg(test)]
-mod gen_test {
+mod gen_test_data {
     use std::{error::Error, fs::File};
     #[tokio::test]
     async fn create_test_data() -> Result<(), Box<dyn Error>> {

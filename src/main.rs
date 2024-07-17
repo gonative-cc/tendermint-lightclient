@@ -64,7 +64,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
             cs_path,
             header_path,
         } => {
-            // we can init and verify in separate command b/c we need storage the consensus state hand latest trusted height.
+            // we cannot init and verify in separate command 
+            // b/c we need storage the consensus state hand latest trusted height.
+            // so I do both here. However when we can separate 2 action if we have data base to store context i.e blockchain. 
             let cs_content = fs::read_to_string(cs_path)?;
             let cs: ConsensusState = serde_json::from_str(&cs_content)?;
             client.initialise(&mut ctx, &client_id, cs.into())?;

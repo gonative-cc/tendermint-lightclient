@@ -3,6 +3,9 @@ use ibc_core::{client::types::Height, commitment_types::commitment::CommitmentRo
 use tendermint::{account::Id, block::signed_header::SignedHeader};
 use tendermint_rpc::{Client, HttpClient, Paging, Url};
 
+/// Provider help use query data from chain. 
+/// We use it for test only. However good to have this API here. 
+///
 pub struct LightClientProvider {
     provider: HttpClient,
 }
@@ -66,22 +69,5 @@ impl LightClientProvider {
         }
     }
 
-    pub async fn fetch_block(&self) {
-        let ans = self.provider.latest_block().await.unwrap();
-        println!("{:#?}", ans.block);
-    }
 }
 
-#[cfg(test)]
-mod provider_test {
-    use super::LightClientProvider;
-
-    #[tokio::test]
-    async fn fetch_block_test() {
-        let url_str = "http://127.0.0.1:27010".to_string();
-        let url = url_str.parse().unwrap();
-        let provider = LightClientProvider::new(url);
-        let ans = provider.fetch_block().await;
-        println!("ans {:?}", ans);
-    }
-}
