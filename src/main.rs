@@ -1,7 +1,6 @@
-use std::io::prelude::*;
 use std::{
     error::Error,
-    fs::{self, File},
+    fs::{self},
     time::Duration,
 };
 
@@ -14,24 +13,12 @@ use ibc_client_tendermint::{
 };
 
 use ibc_core::{
-    client::types::Height,
-    commitment_types::{commitment::CommitmentRoot, specs::ProofSpecs},
-    host::types::identifiers::ChainId,
-    primitives::ToVec,
-};
-use ibc_core::{
-    client::{
-        self,
-        context::{
-            client_state::{ClientStateExecution, ClientStateValidation},
-            ClientExecutionContext, ClientValidationContext,
-        },
-    },
+    client::context::client_state::{ClientStateExecution, ClientStateValidation},
     host::types::identifiers::ClientId,
 };
-use provider::LightClientProvider;
-use serde::{Deserialize, Serialize};
-use tendermint::{Hash, Time};
+use ibc_core::{
+    client::types::Height, commitment_types::specs::ProofSpecs, host::types::identifiers::ChainId,
+};
 
 mod api;
 mod context;
@@ -84,7 +71,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let header_content = fs::read_to_string(header_path)?;
             let lc_header: Header = serde_json::from_str(&header_content)?;
             client.verify_client_message(&ctx, &client_id, lc_header.into())?;
-           
         }
     }
 

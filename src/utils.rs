@@ -25,7 +25,7 @@ mod gen_test {
         let tmp = Tmp {
             root: cs.root.as_bytes(),
             timestamp: cs.timestamp(),
-            next_validators_hash: cs.next_validators_hash.into(),
+            next_validators_hash: cs.next_validators_hash,
         };
 
         file.write_all(serde_json::to_string(&tmp)?.as_bytes())?;
@@ -39,5 +39,4 @@ mod gen_test {
         file.write_all(serde_json::to_string(&cs)?.as_bytes())?;
         Ok(())
     }
-
 }

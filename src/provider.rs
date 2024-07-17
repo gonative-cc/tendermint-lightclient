@@ -1,17 +1,6 @@
-use futures::executor::block_on;
-use ibc_client_tendermint::{
-    consensus_state::ConsensusState,
-    types::{ConsensusState as ConsensusStateType, Header},
-};
+use ibc_client_tendermint::types::{ConsensusState as ConsensusStateType, Header};
 use ibc_core::{client::types::Height, commitment_types::commitment::CommitmentRoot};
-use tendermint::{
-    account::Id,
-    block::{
-        self,
-        signed_header::{self, SignedHeader},
-    },
-    proposal,
-};
+use tendermint::{account::Id, block::signed_header::SignedHeader};
 use tendermint_rpc::{Client, HttpClient, Paging, Url};
 
 pub struct LightClientProvider {
