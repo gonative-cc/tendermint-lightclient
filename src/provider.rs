@@ -25,18 +25,18 @@ impl LightClientProvider {
         }
     }
 
-    pub async fn consensus_state(&self, height: u32) -> ConsensusState {
+    pub async fn consensus_state(&self, height: u32) -> ConsensusStateType {
         let block = self.provider.block(height).await.unwrap();
 
         let timestamp = block.block.header.time;
         let next_validators_hash = block.block.header.next_validators_hash;
         let root = block.block.header.app_hash;
 
-        ConsensusState::from(ConsensusStateType {
+        ConsensusStateType {
             next_validators_hash,
             root: CommitmentRoot::from_bytes(root.as_bytes()),
             timestamp,
-        })
+        }
     }
 
     pub async fn light_header(&self, height: u32) -> Header {

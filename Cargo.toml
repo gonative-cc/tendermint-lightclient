@@ -7,9 +7,10 @@ version = "0.1.0"
 
 [dependencies]
 base64 = "0.22.1"
+clap = { version = "4.5.9", features = ["derive"] }
 futures = "0.3.30"
 ibc-client-tendermint = "0.53.0"
-ibc-core = "0.53.0"
+ibc-core = {version = "0.53.0", features = ["serde"]}
 prost = "0.12.6"
 reqwest = {version = "0.12.5", features = ["json"]}
 serde = "1.0.203"
@@ -18,3 +19,5 @@ tendermint = "0.36.0"
 tendermint-rpc = {version ="0.36.0", features = ["http-client"]}
 tendermint-testgen = "0.36.0"
 tokio = {version = "1.38.0", features = ["full"]}
+
+[features]
