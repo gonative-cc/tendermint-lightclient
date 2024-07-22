@@ -197,7 +197,7 @@ mod tests {
         },
     };
 
-    use ibc_core::{client::context::client_state::ClientStateValidation, commitment_types::commitment::{CommitmentPrefix, CommitmentProofBytes, CommitmentRoot}};
+    use ibc_core::{client::context::client_state::ClientStateValidation, commitment_types::commitment::{CommitmentPrefix, CommitmentProofBytes, CommitmentRoot}, host::types::{identifiers::{ChannelId, PortId, Sequence}, path::{CommitmentPath, Path}}};
 
     use ibc_core::{commitment_types::specs::ProofSpecs, host::types::identifiers::ChainId};
 
@@ -338,8 +338,13 @@ mod tests {
 
         let proof = CommitmentProofBytes::try_from(proof_bytes).unwrap();
         let root= CommitmentRoot::from_bytes(&base64_to_bytes("OrwyiNobhGhuFDpKXxy1qZWfkUpaTiTxvz+dSOqhfrs="));
+        let port_id = PortId::new("transfer".to_owned()).unwrap();
+        let channel_id = ChannelId::new(0);
+        let sequence = Sequence::from(3512624);
 
-        
+        let path = Path::Commitment(CommitmentPath::new(&port_id, &channel_id, sequence));
+        // value = 
+        // client.verify_membership(&prefix, &proof, &root, path, value); 
     }
 
 
