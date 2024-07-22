@@ -13,7 +13,7 @@ use ibc_client_tendermint::{
 };
 
 use ibc_core::{
-    client::context::client_state::{ClientStateExecution, ClientStateValidation},
+    client::context::client_state::{ClientStateExecution, ClientStateValidation, ClientStateCommon},
     host::types::identifiers::ClientId,
 };
 use ibc_core::{
@@ -73,9 +73,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let header_content = fs::read_to_string(header_path)?;
             let lc_header: Header = serde_json::from_str(&header_content)?;
             client.verify_client_message(&ctx, &client_id, lc_header.into())?;
+
+            // client.verify_membership(prefix, proof, root, path, value)
         }
+
     }
 
-    println!("Pass!");
     Ok(())
 }
