@@ -1,4 +1,4 @@
-// gen_test_data help us create data for test cli. 
+// gen_test_data help us create data for test cli.
 #[cfg(test)]
 mod gen_test_data {
     use std::{error::Error, fs::File};

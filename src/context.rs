@@ -7,7 +7,8 @@ use ibc_core::handler::types::error::ContextError;
 use ibc_core::{
     client::{
         context::{
-            client_state::{ClientStateExecution, ClientStateCommon}, ClientExecutionContext, ClientValidationContext,
+            client_state::{ClientStateCommon, ClientStateExecution},
+            ClientExecutionContext, ClientValidationContext,
         },
         types::Height,
     },
@@ -195,7 +196,6 @@ mod tests {
 
     use crate::api::TendermintClient;
 
- 
     use ibc_client_tendermint::{
         client_state::ClientState,
         types::{
@@ -204,7 +204,20 @@ mod tests {
         },
     };
 
-    use ibc_core::{channel::types::{commitment::compute_packet_commitment, packet::{self, Packet, PacketState}, timeout::TimeoutHeight}, client::context::client_state::ClientStateValidation, commitment_types::commitment::{CommitmentPrefix, CommitmentProofBytes, CommitmentRoot}, host::types::{identifiers::{ChannelId, PortId, Sequence}, path::{CommitmentPath, Path}}, primitives::Timestamp};
+    use ibc_core::{
+        channel::types::{
+            commitment::compute_packet_commitment,
+            packet::{self, Packet, PacketState},
+            timeout::TimeoutHeight,
+        },
+        client::context::client_state::ClientStateValidation,
+        commitment_types::commitment::{CommitmentPrefix, CommitmentProofBytes, CommitmentRoot},
+        host::types::{
+            identifiers::{ChannelId, PortId, Sequence},
+            path::{CommitmentPath, Path},
+        },
+        primitives::Timestamp,
+    };
 
     use ibc_core::{commitment_types::specs::ProofSpecs, host::types::identifiers::ChainId};
 
@@ -300,11 +313,9 @@ mod tests {
         client
             .update_state(&mut ctx, &client_id, header.into())
             .expect("Not fails");
-
-
     }
 
-    #[test] 
+    #[test]
     fn verify_membership_test() {
         let five_year = 5 * 365 * 24 * 60 * 60;
 
@@ -338,36 +349,44 @@ mod tests {
 
         let client = ClientState::from(client);
 
-
         let prefix = CommitmentPrefix::try_from("ibc".as_bytes().to_vec()).unwrap();
         let proof_bytes = base64_to_bytes("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");
 
         let proof: CommitmentProofBytes = CommitmentProofBytes::try_from(proof_bytes).unwrap();
-        let root= CommitmentRoot::from_bytes(&base64_to_bytes("QNvnS2A//laHEjW9qVB5hya4zOCyugOIXU4vi0vnBww="));
+        let root = CommitmentRoot::from_bytes(&base64_to_bytes(
+            "QNvnS2A//laHEjW9qVB5hya4zOCyugOIXU4vi0vnBww=",
+        ));
         let port_id = PortId::new("transfer".to_owned()).unwrap();
         let channel_id = ChannelId::new(0);
         let sequence = Sequence::from(3514632);
 
         let packet = Packet {
-            chan_id_on_a: channel_id.clone(), 
-            chan_id_on_b: channel_id.clone(), 
+            chan_id_on_a: channel_id.clone(),
+            chan_id_on_b: channel_id.clone(),
             seq_on_a: sequence,
             port_id_on_a: port_id.clone(),
-            port_id_on_b: port_id.clone(), 
+            port_id_on_b: port_id.clone(),
             data: base64_to_bytes("eyJhbW91bnQiOiIyMDE5NzM2NCIsImRlbm9tIjoidHJhbnNmZXIvY2hhbm5lbC0wL3VhdG9tIiwicmVjZWl2ZXIiOiJjb3Ntb3MxaDUyamF6bHBtZTJkNWwybWo1bHlhcnlhZmNrbGRqMjBlbHNreGwiLCJzZW5kZXIiOiJvc21vMWg1MmphemxwbWUyZDVsMm1qNWx5YXJ5YWZja2xkajIwM3lyeHNkIn0="),
             timeout_height_on_b: TimeoutHeight::At(Height::new(4, 21413739).unwrap()),
             timeout_timestamp_on_b: Timestamp::from_nanoseconds(0).unwrap(),
         };
 
-        let value = compute_packet_commitment(&packet.data, &packet.timeout_height_on_b, &packet.timeout_timestamp_on_b);
+        let value = compute_packet_commitment(
+            &packet.data,
+            &packet.timeout_height_on_b,
+            &packet.timeout_timestamp_on_b,
+        );
         let path = Path::Commitment(CommitmentPath::new(&port_id, &channel_id, sequence));
-        
+
         let value = value.into_vec();
 
-        println!("{}", base64::engine::general_purpose::STANDARD.encode(value.clone()));
-        
-        client.verify_membership(&prefix, &proof, &root, path, value).expect("pass validate");
+        println!(
+            "{}",
+            base64::engine::general_purpose::STANDARD.encode(value.clone())
+        );
+
+        client
+            .verify_membership(&prefix, &proof, &root, path, value)
+            .expect("pass validate");
     }
-
-
 }

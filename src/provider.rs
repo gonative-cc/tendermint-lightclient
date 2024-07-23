@@ -3,8 +3,8 @@ use ibc_core::{client::types::Height, commitment_types::commitment::CommitmentRo
 use tendermint::{account::Id, block::signed_header::SignedHeader};
 use tendermint_rpc::{Client, HttpClient, Paging, Url};
 
-/// Provider help use query data from chain. 
-/// We use it for test only. However good to have this API here. 
+/// Provider help use query data from chain.
+/// We use it for test only. However good to have this API here.
 ///
 pub struct LightClientProvider {
     provider: HttpClient,
@@ -68,6 +68,4 @@ impl LightClientProvider {
             None => tendermint::validator::Set::without_proposer(validators.validators),
         }
     }
-
 }
-

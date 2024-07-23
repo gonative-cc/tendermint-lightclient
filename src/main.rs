@@ -26,7 +26,6 @@ use ibc_core::{
 use ibc_core::{
     client::types::Height, commitment_types::specs::ProofSpecs, host::types::identifiers::ChainId,
 };
-use tendermint::serializers::bytes;
 
 mod api;
 mod context;
