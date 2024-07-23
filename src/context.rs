@@ -180,6 +180,13 @@ impl<C: ClientType> ExtClientValidationContext for Ctx<C> {
     }
 }
 
+use base64::Engine;
+pub fn base64_to_bytes(base64_str: &str) -> Vec<u8> {
+    base64::engine::general_purpose::STANDARD
+        .decode(base64_str)
+        .unwrap()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -188,7 +195,7 @@ mod tests {
 
     use crate::api::TendermintClient;
 
-    use base64::Engine;
+ 
     use ibc_client_tendermint::{
         client_state::ClientState,
         types::{
@@ -335,7 +342,7 @@ mod tests {
         let prefix = CommitmentPrefix::try_from("ibc".as_bytes().to_vec()).unwrap();
         let proof_bytes = base64_to_bytes("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");
 
-        let proof = CommitmentProofBytes::try_from(proof_bytes).unwrap();
+        let proof: CommitmentProofBytes = CommitmentProofBytes::try_from(proof_bytes).unwrap();
         let root= CommitmentRoot::from_bytes(&base64_to_bytes("QNvnS2A//laHEjW9qVB5hya4zOCyugOIXU4vi0vnBww="));
         let port_id = PortId::new("transfer".to_owned()).unwrap();
         let channel_id = ChannelId::new(0);
@@ -357,7 +364,9 @@ mod tests {
         
         let value = value.into_vec();
 
-        client.verify_membership(&prefix, &proof, &root, path, value).unwrap(); 
+        println!("{}", base64::engine::general_purpose::STANDARD.encode(value.clone()));
+        
+        client.verify_membership(&prefix, &proof, &root, path, value).expect("pass validate");
     }
 
 
