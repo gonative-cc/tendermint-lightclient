@@ -25,7 +25,6 @@ use ibc_core::{
 use ibc_core::{
     client::types::Height, commitment_types::specs::ProofSpecs, host::types::identifiers::ChainId,
 };
-use tendermint::serializers::from_str;
 use utils::{base64_to_bytes, fetch_consensus_state, fetch_header, CSReadable};
 
 mod api;

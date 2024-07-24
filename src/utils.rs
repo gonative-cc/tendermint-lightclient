@@ -24,7 +24,7 @@ impl From<ConsensusState> for CSReadable {
         let root = cs.root.clone();
         CSReadable {
             root: root.into_vec(),
-            timestamp: cs.timestamp().clone(),
+            timestamp: cs.timestamp(),
             next_validators_hash: cs.next_validators_hash,
         }
     }

@@ -10,6 +10,7 @@ pub struct LightClientProvider {
     provider: HttpClient,
 }
 
+#[allow(dead_code)]
 impl LightClientProvider {
     pub fn new(url: Url) -> Self {
         Self {
