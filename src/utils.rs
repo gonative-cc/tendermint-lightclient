@@ -44,3 +44,14 @@ pub async fn fetch_consensus_state(
     file.write_all(serde_json::to_string(&CSReadable::from(cs))?.as_bytes())?;
     Ok(())
 }
+
+
+pub async fn fetch_header(url_str: String, output_path: String, height: u32) -> Result<(), Box<dyn Error>> {
+    use crate::provider::LightClientProvider;
+
+    let provider = LightClientProvider::new(url_str.parse().unwrap());  
+    let mut file = File::create(output_path)?;
+    let cs = provider.light_header(height).await;
+    file.write_all(serde_json::to_string(&cs)?.as_bytes())?;
+    Ok(())
+}

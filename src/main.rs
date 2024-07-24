@@ -26,7 +26,7 @@ use ibc_core::{
     client::types::Height, commitment_types::specs::ProofSpecs, host::types::identifiers::ChainId,
 };
 use tendermint::serializers::from_str;
-use utils::{base64_to_bytes, fetch_consensus_state, CSReadable};
+use utils::{base64_to_bytes, fetch_consensus_state, fetch_header, CSReadable};
 
 mod api;
 mod context;
@@ -50,6 +50,11 @@ enum LCCLi {
     },
     FetchConsensusState {
         url: String,
+        output_path: String,
+    },
+    FetchHeader {
+        url: String,
+        height: u32,
         output_path: String,
     },
 }
@@ -96,7 +101,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
             client.verify_client_message(&ctx, &client_id, lc_header.clone().into())?;
             let new_cs = ConsensusState::from(lc_header);
 
-            fs::write(new_cs_path, serde_json::to_string(&CSReadable::from(new_cs)).unwrap())?;
+            fs::write(
+                new_cs_path,
+                serde_json::to_string(&CSReadable::from(new_cs)).unwrap(),
+            )?;
         }
 
         LCCLi::StateProof {
@@ -127,6 +135,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
         LCCLi::FetchConsensusState { url, output_path } => {
             fetch_consensus_state(url, output_path).await?;
         }
+        LCCLi::FetchHeader {
+            url,
+            height,
+            output_path,
+        } => fetch_header(url, output_path, height).await?,
     }
 
     Ok(())
