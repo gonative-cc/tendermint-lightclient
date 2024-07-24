@@ -6,7 +6,7 @@ use std::{
 
 use api::TendermintClient;
 use clap::Parser;
-use context::{Ctx};
+use context::Ctx;
 use ibc_client_tendermint::{
     client_state::ClientState,
     types::{AllowUpdate, ClientState as ClientStateType, ConsensusState, Header, TrustThreshold},
@@ -25,7 +25,8 @@ use ibc_core::{
 use ibc_core::{
     client::types::Height, commitment_types::specs::ProofSpecs, host::types::identifiers::ChainId,
 };
-use utils::{base64_to_bytes, fetch_consensus_state};
+use tendermint::serializers::from_str;
+use utils::{base64_to_bytes, fetch_consensus_state, CSReadable};
 
 mod api;
 mod context;
@@ -38,6 +39,7 @@ enum LCCLi {
     Verify {
         cs_path: String,
         header_path: String,
+        new_cs_path: String,
     },
     StateProof {
         proof_path: String,
@@ -48,8 +50,8 @@ enum LCCLi {
     },
     FetchConsensusState {
         url: String,
-        output_path: String
-    }
+        output_path: String,
+    },
 }
 
 #[tokio::main]
@@ -81,6 +83,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         LCCLi::Verify {
             cs_path,
             header_path,
+            new_cs_path,
         } => {
             // we cannot init and verify in separate command
             // b/c we need storage the consensus state hand latest trusted height.
@@ -90,7 +93,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
             client.initialise(&mut ctx, &client_id, cs.into())?;
             let header_content = fs::read_to_string(header_path)?;
             let lc_header: Header = serde_json::from_str(&header_content)?;
-            client.verify_client_message(&ctx, &client_id, lc_header.into())?;
+            client.verify_client_message(&ctx, &client_id, lc_header.clone().into())?;
+            let new_cs = ConsensusState::from(lc_header);
+
+            fs::write(new_cs_path, serde_json::to_string(&CSReadable::from(new_cs)).unwrap())?;
         }
 
         LCCLi::StateProof {
@@ -117,8 +123,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let prefix = CommitmentPrefix::try_from(prefix.as_bytes().to_vec())?;
 
             client.verify_membership(&prefix, &proof, &app_hash, path, value)?;
-        },
-        LCCLi::FetchConsensusState { url , output_path} => {
+        }
+        LCCLi::FetchConsensusState { url, output_path } => {
             fetch_consensus_state(url, output_path).await?;
         }
     }

@@ -1,18 +1,39 @@
+use std::io::Write;
 use std::{error::Error, fs::File};
 
+use serde::{Deserialize, Serialize};
+use tendermint::{Hash, Time};
+
 use base64::Engine;
+use ibc_client_tendermint::types::ConsensusState;
 pub fn base64_to_bytes(base64_str: &str) -> Vec<u8> {
     base64::engine::general_purpose::STANDARD
         .decode(base64_str)
         .unwrap()
 }
 
-pub async fn fetch_consensus_state(url_str: String, output_path: String) -> Result<(), Box<dyn Error>> {
-    use std::io::Write;
+#[derive(Serialize, Deserialize, Clone)]
+pub struct CSReadable {
+    root: Vec<u8>,
+    timestamp: Time,
+    next_validators_hash: Hash,
+}
 
-    use serde::{Deserialize, Serialize};
-    use tendermint::{Hash, Time};
+impl From<ConsensusState> for CSReadable{
+    fn from(cs: ConsensusState) -> Self {
+        let root = cs.root.clone();
+        CSReadable {
+            root: root.into_vec(),
+            timestamp: cs.timestamp().clone(),
+            next_validators_hash: cs.next_validators_hash,
+        }
+    }
+}
 
+pub async fn fetch_consensus_state(
+    url_str: String,
+    output_path: String,
+) -> Result<(), Box<dyn Error>> {
     use crate::provider::LightClientProvider;
 
     let provider = LightClientProvider::new(url_str.parse().unwrap());
@@ -20,19 +41,6 @@ pub async fn fetch_consensus_state(url_str: String, output_path: String) -> Resu
     let mut file = File::create(output_path)?;
     let cs = provider.consensus_state(6).await;
 
-    #[derive(Serialize, Deserialize)]
-    struct Tmp<'a> {
-        root: &'a [u8],
-        timestamp: Time,
-        next_validators_hash: Hash,
-    }
-
-    let tmp = Tmp {
-        root: cs.root.as_bytes(),
-        timestamp: cs.timestamp(),
-        next_validators_hash: cs.next_validators_hash,
-    };
-
-    file.write_all(serde_json::to_string(&tmp)?.as_bytes())?;
+    file.write_all(serde_json::to_string(&CSReadable::from(cs))?.as_bytes())?;
     Ok(())
 }
