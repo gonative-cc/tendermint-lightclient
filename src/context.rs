@@ -181,8 +181,6 @@ impl<C: ClientType> ExtClientValidationContext for Ctx<C> {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
