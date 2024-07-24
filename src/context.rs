@@ -181,12 +181,7 @@ impl<C: ClientType> ExtClientValidationContext for Ctx<C> {
     }
 }
 
-use base64::Engine;
-pub fn base64_to_bytes(base64_str: &str) -> Vec<u8> {
-    base64::engine::general_purpose::STANDARD
-        .decode(base64_str)
-        .unwrap()
-}
+
 
 #[cfg(test)]
 mod tests {
@@ -194,7 +189,7 @@ mod tests {
 
     use std::{str::FromStr, time::Duration};
 
-    use crate::api::TendermintClient;
+    use crate::{api::TendermintClient, utils::base64_to_bytes};
 
     use ibc_client_tendermint::{
         client_state::ClientState,

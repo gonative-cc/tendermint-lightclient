@@ -1,13 +1,12 @@
 use std::{
     error::Error,
     fs::{self},
-    io::Read,
     time::Duration,
 };
 
 use api::TendermintClient;
 use clap::Parser;
-use context::{base64_to_bytes, Ctx};
+use context::{Ctx};
 use ibc_client_tendermint::{
     client_state::ClientState,
     types::{AllowUpdate, ClientState as ClientStateType, ConsensusState, Header, TrustThreshold},
@@ -26,6 +25,7 @@ use ibc_core::{
 use ibc_core::{
     client::types::Height, commitment_types::specs::ProofSpecs, host::types::identifiers::ChainId,
 };
+use utils::{base64_to_bytes, fetch_consensus_state};
 
 mod api;
 mod context;
@@ -46,6 +46,10 @@ enum LCCLi {
         value: String,
         prefix: String,
     },
+    FetchConsensusState {
+        url: String,
+        output_path: String
+    }
 }
 
 #[tokio::main]
@@ -113,6 +117,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let prefix = CommitmentPrefix::try_from(prefix.as_bytes().to_vec())?;
 
             client.verify_membership(&prefix, &proof, &app_hash, path, value)?;
+        },
+        LCCLi::FetchConsensusState { url , output_path} => {
+            fetch_consensus_state(url, output_path).await?;
         }
     }
 
