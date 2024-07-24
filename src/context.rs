@@ -245,12 +245,6 @@ mod tests {
         pub allow_update: AllowUpdate,
     }
 
-    pub fn base64_to_bytes(base64_str: &str) -> Vec<u8> {
-        base64::engine::general_purpose::STANDARD
-            .decode(base64_str)
-            .unwrap()
-    }
-
     pub fn dummy_consensus_state() -> ConsensusStateType {
         ConsensusStateType::new(
             base64_to_bytes("EIP4I6oX9Nf8icn2zA11HBeAwjEfabYIUsw9TDd/2iI=").into(),
@@ -379,11 +373,6 @@ mod tests {
         let path = Path::Commitment(CommitmentPath::new(&port_id, &channel_id, sequence));
 
         let value = value.into_vec();
-
-        println!(
-            "{}",
-            base64::engine::general_purpose::STANDARD.encode(value.clone())
-        );
 
         client
             .verify_membership(&prefix, &proof, &root, path, value)
