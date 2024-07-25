@@ -38,6 +38,10 @@ enum LCCLi {
     Verify {
         cs_path: String,
         header_path: String,
+    },
+    Update {
+        cs_path: String,
+        header_path: String,
         new_cs_path: String,
     },
     StateProof {
@@ -87,11 +91,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
         LCCLi::Verify {
             cs_path,
             header_path,
-            new_cs_path,
         } => {
             // we cannot init and verify in separate command
             // b/c we need storage the consensus state hand latest trusted height.
             // so I do both here. However when we can separate 2 action if we have data base to store context i.e blockchain.
+            let cs_content = fs::read_to_string(cs_path)?;
+            let cs: ConsensusState = serde_json::from_str(&cs_content)?;
+            client.initialise(&mut ctx, &client_id, cs.into())?;
+            let header_content = fs::read_to_string(header_path)?;
+            let lc_header: Header = serde_json::from_str(&header_content)?;
+            client.verify_client_message(&ctx, &client_id, lc_header.clone().into())?;
+        }
+        LCCLi::Update {
+            cs_path,
+            header_path,
+            new_cs_path,
+        } => {
+            // TODO: Remove this duplicate code.
             let cs_content = fs::read_to_string(cs_path)?;
             let cs: ConsensusState = serde_json::from_str(&cs_content)?;
             client.initialise(&mut ctx, &client_id, cs.into())?;
