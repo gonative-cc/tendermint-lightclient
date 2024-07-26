@@ -134,7 +134,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let proof = CommitmentProofBytes::try_from(proof_bytes)?;
 
             let app_hash = CommitmentRoot::from_bytes(&base64_to_bytes(&app_hash));
-            
+
             let value = base64_to_bytes(&value).to_vec();
 
             let port_id = PortId::new("transfer".to_owned()).unwrap();
