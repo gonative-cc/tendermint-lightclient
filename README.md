@@ -8,6 +8,16 @@ PoC for a minimalistic TM Light Client based on [lib-rs](https://github.com/cosm
 
 This command fetch consensus state and header from full-node. This only use for testing `Verify` command.  
 
+Fetch current consensus state and save output to output_path. URL is a full-node endpoint.
+```bash 
+tendermint-lightclient fetch-consensus-state <URL> <OUTPUT_PATH>
+```
+Fetch header at height and save output to output_path. URL is a full-node endpoint.
+
+```bash
+tendermint-lightclient fetch-header <URL> <HEIGHT> <OUTPUT_PATH>
+```
+
 ### Verify
 
 This command verifies a new state (can extract from header) is valid state start from consensus state in cs_path file.
