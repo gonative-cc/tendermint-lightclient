@@ -5,6 +5,7 @@ PoC for a minimalistic TM Light Client based on [lib-rs](https://github.com/cosm
 ## Cli interface 
 
 ### Fetch Consensus State and Header 
+
 This command fetch consensus state and header from full-node. This only use for testing `Verify` command.  
 
 ### Verify
