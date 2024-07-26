@@ -355,7 +355,7 @@ mod tests {
         let channel_id = ChannelId::new(0);
         let sequence = Sequence::from(3514632);
 
-        // data, timeout_height and timeout_timestamp from packet field in MsgRecvPacket msg.
+        // IBC MsgRecvPacket type fields:
         let data =  base64_to_bytes("eyJhbW91bnQiOiIyMDE5NzM2NCIsImRlbm9tIjoidHJhbnNmZXIvY2hhbm5lbC0wL3VhdG9tIiwicmVjZWl2ZXIiOiJjb3Ntb3MxaDUyamF6bHBtZTJkNWwybWo1bHlhcnlhZmNrbGRqMjBlbHNreGwiLCJzZW5kZXIiOiJvc21vMWg1MmphemxwbWUyZDVsMm1qNWx5YXJ5YWZja2xkajIwM3lyeHNkIn0=");
         let timeout_height = TimeoutHeight::At(Height::new(4, 21413739).unwrap());
         let timeout_timestamp = Timestamp::from_nanoseconds(0).unwrap();
