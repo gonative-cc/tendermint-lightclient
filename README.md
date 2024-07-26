@@ -24,14 +24,19 @@ This command verifies a new state (can extract from header) is valid state start
 
 ```bash
 tendermint-lightclient verify <CS_PATH> <HEADER_PATH>
-
+```
 ### Update 
 
 This command work like verify command but create new consensus state and save to new_cs_path. 
 
 ```bash
 tendermint-lightclient update <CS_PATH> <HEADER_PATH> <NEW_CS_PATH>
+```
 
 ### State Proof 
+
+```bash
+tendermint-lightclient state-proof <PROOF_PATH> <APP_HASH> <SEQUENCE> <VALUE> <PREFIX>
+```
 
 In current version, we only support proof packet transfer on full-node. We only verify the Cosmos IAVL Store.  

@@ -198,10 +198,7 @@ mod tests {
     };
 
     use ibc_core::{
-        channel::types::{
-            commitment::compute_packet_commitment,
-            timeout::TimeoutHeight,
-        },
+        channel::types::{commitment::compute_packet_commitment, timeout::TimeoutHeight},
         client::context::client_state::ClientStateValidation,
         commitment_types::commitment::{CommitmentPrefix, CommitmentProofBytes, CommitmentRoot},
         host::types::{
