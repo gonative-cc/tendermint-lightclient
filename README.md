@@ -28,10 +28,11 @@ pub struct ConsensusState {
 This command verifies a new state (can extract from header) is valid state start from consensus state in cs_path file.
 
 ### Update 
+
+This command work like verify command but create new consensus state and save to new_cs_path. 
+
 ```bash
 tendermint-lightclient update <CS_PATH> <HEADER_PATH> <NEW_CS_PATH>
-```
-This command work like verify command but create new consensus state and save to new_cs_path. 
 
 ### State Proof 
 
