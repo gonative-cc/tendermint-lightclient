@@ -7,7 +7,8 @@ use ibc_core::handler::types::error::ContextError;
 use ibc_core::{
     client::{
         context::{
-            client_state::ClientStateExecution, ClientExecutionContext, ClientValidationContext,
+            client_state::{ClientStateCommon, ClientStateExecution},
+            ClientExecutionContext, ClientValidationContext,
         },
         types::Height,
     },
@@ -186,9 +187,8 @@ mod tests {
 
     use std::{str::FromStr, time::Duration};
 
-    use crate::api::TendermintClient;
+    use crate::{api::TendermintClient, utils::base64_to_bytes};
 
-    use base64::Engine;
     use ibc_client_tendermint::{
         client_state::ClientState,
         types::{
@@ -197,10 +197,20 @@ mod tests {
         },
     };
 
-    use ibc_core::client::context::client_state::ClientStateValidation;
+    use ibc_core::{
+        channel::types::{commitment::compute_packet_commitment, timeout::TimeoutHeight},
+        client::context::client_state::ClientStateValidation,
+        commitment_types::commitment::{CommitmentPrefix, CommitmentProofBytes, CommitmentRoot},
+        host::types::{
+            identifiers::{ChannelId, PortId, Sequence},
+            path::{CommitmentPath, Path},
+        },
+        primitives::Timestamp,
+    };
 
     use ibc_core::{commitment_types::specs::ProofSpecs, host::types::identifiers::ChainId};
 
+    use serde::{Deserialize, Serialize};
     use tendermint::{time::Time, Hash};
 
     // TODO: Get msg from protobuf
@@ -223,12 +233,6 @@ mod tests {
         pub proof_specs: ProofSpecs,
         pub upgrade_path: Vec<String>,
         pub allow_update: AllowUpdate,
-    }
-
-    pub fn base64_to_bytes(base64_str: &str) -> Vec<u8> {
-        base64::engine::general_purpose::STANDARD
-            .decode(base64_str)
-            .unwrap()
     }
 
     pub fn dummy_consensus_state() -> ConsensusStateType {
@@ -293,5 +297,89 @@ mod tests {
         client
             .update_state(&mut ctx, &client_id, header.into())
             .expect("Not fails");
+    }
+
+    #[test]
+    fn verify_membership_test() {
+        let five_year = 5 * 365 * 24 * 60 * 60;
+
+        let params: ClientStateParams = ClientStateParams {
+            id: ChainId::new("chain2").unwrap(),
+            trust_level: TrustThreshold::ONE_THIRD,
+            trusting_period: Duration::new(five_year, 0),
+            unbonding_period: Duration::new(five_year + 1, 0),
+            max_clock_drift: Duration::new(40, 0),
+            latest_height: Height::new(0, 6).expect("Never fails"),
+            proof_specs: ProofSpecs::cosmos(),
+            upgrade_path: vec!["upgrade".to_string(), "upgradedIBCState".to_string()],
+            allow_update: AllowUpdate {
+                after_expiry: true,
+                after_misbehaviour: true,
+            },
+        };
+
+        let client = ClientStateType::new(
+            params.id,
+            params.trust_level,
+            params.trusting_period,
+            params.unbonding_period,
+            params.max_clock_drift,
+            params.latest_height,
+            params.proof_specs,
+            params.upgrade_path,
+            params.allow_update,
+        )
+        .unwrap();
+
+        let client = ClientState::from(client);
+
+        // Data for this test from this tx:
+        //  - https://www.mintscan.io/cosmos/tx/A0E69441FB46C5797C1193D6EAA7EB5A59A809F0433ECA6CE29D7CD3DEFED679?height=21413592&sector=json
+        // This transaction transfer token from Osmosis to Cosmos Hub
+        // ibc module prefix = "ibc"
+        let ibc_prefix = CommitmentPrefix::try_from("ibc".as_bytes().to_vec()).unwrap();
+
+        // struct store data we extract from mintscan for proof member ship.
+        #[derive(Serialize, Deserialize)]
+        struct ProofData {
+            proof_commitment: String,
+            data: String,
+            root: String,
+        }
+
+        let proof_data = serde_json::from_str::<ProofData>(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/data/proof.json"
+        )))
+        .unwrap();
+
+        // The proof of store on Osmosis. This is proof_commitment field.
+        let proof_bytes = base64_to_bytes(&proof_data.proof_commitment);
+
+        let proof: CommitmentProofBytes = CommitmentProofBytes::try_from(proof_bytes).unwrap();
+
+        // This is the root of multistore or app_hash/root of Osmosis client on CosmosHub
+        let root = CommitmentRoot::from_bytes(&base64_to_bytes(&proof_data.root));
+        // Those data help us get the path of Commitment Path. You can check packet field in MsgRecvPacket msg.
+        let port_id = PortId::new("transfer".to_owned()).unwrap();
+        let channel_id = ChannelId::new(0);
+        let sequence = Sequence::from(3514632);
+
+        // IBC MsgRecvPacket type fields:
+        let data = base64_to_bytes(&proof_data.data);
+        let timeout_height = TimeoutHeight::At(Height::new(4, 21413739).unwrap());
+        let timeout_timestamp = Timestamp::from_nanoseconds(0).unwrap();
+
+        // hash those data together.
+        let value = compute_packet_commitment(&data, &timeout_height, &timeout_timestamp);
+        let value = value.into_vec();
+
+        // This is the path we save value on cosmos Store i.e Store[path] = value
+        let path = Path::Commitment(CommitmentPath::new(&port_id, &channel_id, sequence));
+
+        // we prove MultiStore[prefix == ibc_prefix, Store[path] == value] with proof.
+        client
+            .verify_membership(&ibc_prefix, &proof, &root, path, value)
+            .expect("pass validate");
     }
 }
