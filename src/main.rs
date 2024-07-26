@@ -34,7 +34,7 @@ mod storage;
 mod utils;
 
 #[derive(Parser, Debug)]
-enum LCCLi {
+enum LightClientCli {
     Verify {
         cs_path: String,
         header_path: String,
@@ -64,7 +64,7 @@ enum LCCLi {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let cli = LCCLi::parse();
+    let cli = LightClientCli::parse();
     let five_year = 5 * 365 * 24 * 60 * 60;
 
     // TODO: READ it from json file also
@@ -88,7 +88,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let client_id = ClientId::new("stand-alone", 0)?;
 
     match cli {
-        LCCLi::Verify {
+        LightClientCli::Verify {
             cs_path,
             header_path,
         } => {
@@ -102,7 +102,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let lc_header: Header = serde_json::from_str(&header_content)?;
             client.verify_client_message(&ctx, &client_id, lc_header.clone().into())?;
         }
-        LCCLi::Update {
+        LightClientCli::Update {
             cs_path,
             header_path,
             new_cs_path,
@@ -122,7 +122,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             )?;
         }
 
-        LCCLi::StateProof {
+        LightClientCli::StateProof {
             proof_path,
             app_hash,
             sequence,
@@ -134,7 +134,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let proof = CommitmentProofBytes::try_from(proof_bytes)?;
 
             let app_hash = CommitmentRoot::from_bytes(&base64_to_bytes(&app_hash));
-            //qL2d/cBna/9Er/v+97mkhT8bcssh3Hs4OLcO3ZUAELg=
+            
             let value = base64_to_bytes(&value).to_vec();
 
             let port_id = PortId::new("transfer".to_owned()).unwrap();
@@ -147,10 +147,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
             client.verify_membership(&prefix, &proof, &app_hash, path, value)?;
         }
-        LCCLi::FetchConsensusState { url, output_path } => {
+        LightClientCli::FetchConsensusState { url, output_path } => {
             fetch_consensus_state(url, output_path).await?;
         }
-        LCCLi::FetchHeader {
+        LightClientCli::FetchHeader {
             url,
             height,
             output_path,
